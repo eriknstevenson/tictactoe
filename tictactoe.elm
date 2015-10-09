@@ -3,10 +3,12 @@ module Tictactoe where
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Array as A
 import Signal as S
 import List as L
 import List.Extra as LE
 import Maybe as M
+import Matrix as MX
 import StartApp.Simple as StartApp
 
 -- MODEL
@@ -23,8 +25,9 @@ toggleTurn player =
 
 type alias Board = List Square
 
--- convertTo2D : List Square -> List (List Square)
-convertTo2D board = 
+--converts [1,2,3,4] to [[1,2],[3,4]]
+convertTo2D : List a -> Int -> List (List a)
+convertTo2D board size = 
   let 
     splitEvery n list = 
       case list of
@@ -32,7 +35,15 @@ convertTo2D board =
         list -> let (first, rest) = LE.splitAt n list
                 in first :: (splitEvery n rest)
   in
-    splitEvery 3 board
+    splitEvery size board
+
+(!!) : List a -> Int -> M.Maybe a
+xs !! n = 
+  if | n < 0     -> Nothing
+     | otherwise -> case (xs,n) of
+         ([],_)    -> Nothing
+         (x::xs,0) -> Just x
+         (_::xs,n) -> xs !! (n-1)
 
 type SquareStatus = Empty | X | O
 
@@ -68,26 +79,50 @@ update action model =
             {square | status <- newStatus} 
           else 
             square
+
         newStatus = case model.turn of 
           Red -> X
           Blue -> O
+
+        moveX = (id-1) % 3
+        moveY = ((toFloat id)-1) / 3 |> floor
+
         updatedBoard = L.map updateStatus model.board
-        updated2DBoard = convertTo2D updatedBoard
-        checkForWinner = M.oneOf [ updated2DBoard 
-                                     |> LE.transpose 
-                                     |> checkVerticals, 
-                                   updated2DBoard 
-                                     |> checkHorizontals,
-                                   updated2DBoard
-                                     |> checkDiagonals ]
-        checkVerticals board = Nothing
-        checkHorizontals board = Nothing
-        checkDiagonals board = Nothing
+
+        updatedBoardStatus = L.map .status updatedBoard
+
+        convertedBoard = convertTo2D updatedBoardStatus 3
+
+        isThereAWinner = [ checkVerticals, checkHorizontals, checkDiagonals ]
+                           |> L.filter (\n->n>=3)
+                           |> L.isEmpty
+                           |> not
+
+        checkForWinner = case isThereAWinner of
+          True -> Just model.turn
+          False -> Nothing
+
+        checkDir : (Int, Int) -> (Int, Int) -> Int -> Int
+        checkDir (x, y) (dx, dy) total = 0 
+          --case (M.withDefault [] (convertedBoard !! y)) !! x of
+          --newStatus -> 0 -- checkDir (x + dx) (y + dy) dx dy (total+1)
+          --Nothing -> total
+          
+        checkVerticals = L.sum [ checkDir (moveX, moveY) (0, -1) 0,
+                                 checkDir (moveX, moveY) (0, 1) 0 ]
+
+        checkHorizontals = L.sum [ checkDir (moveX, moveY) (-1, 0) 0,
+                                   checkDir (moveX, moveY) (1, 0) 0 ]
+
+        checkDiagonals = L.sum [ checkDir (moveX, moveY) (-1, -1) 0,
+                                 checkDir (moveX, moveY) (-1, 1) 0,
+                                 checkDir (moveX, moveY) (1, -1) 0,
+                                 checkDir (moveX, moveY) (1, 1) 0 ]
+
       in {model | board <- updatedBoard,
                   turn <- (toggleTurn model.turn),
                   winner <- checkForWinner,
-                  gameOver <- ((L.map .status updatedBoard)
-                              |> L.member Empty |> not )
+                  gameOver <- (updatedBoardStatus |> LE.notMember Empty )
                               || checkForWinner /= Nothing}
 
 -- VIEW
