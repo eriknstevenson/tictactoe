@@ -5,6 +5,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Signal as S
 import List as L
+import Maybe
 import StartApp.Simple as StartApp
 
 -- MODEL
@@ -30,12 +31,16 @@ newSquare = { status = Empty,
 
 
 type alias Model = { board : Board,
-                     turn : Player }
+                     turn : Player,
+                     winner : Maybe Player,
+                     gameOver : Bool }
 
 initialModel : Model
 initialModel = {
     board = L.map2 (\sqr id -> {sqr | id <- id} ) (L.repeat 9 newSquare) [1..9],
-    turn = Red
+    turn = Red,
+    winner = Nothing,
+    gameOver = False
   }
 
 --UPDATE
@@ -46,12 +51,21 @@ update action model =
     None -> model
     MakeMove id ->
       let
+        checkForWinner = Nothing
         newStatus = case model.turn of 
           Red -> X
           Blue -> O
-        updateStatus square = if square.id==id then {square | status <- newStatus} else square
+        updateStatus square = 
+          if square.id==id then 
+            {square | status <- newStatus} 
+          else 
+            square
       in {model | board <- L.map updateStatus model.board,
-                  turn <- (toggleTurn model.turn)}
+                  turn <- (toggleTurn model.turn),
+                  winner <- checkForWinner,
+                  gameOver <- (L.map .status model.board
+                              |> L.member Empty  |> not )
+                              || model.winner /= Nothing}
 -- VIEW
 
 view : S.Address Action -> Model -> Html
