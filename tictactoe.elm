@@ -25,18 +25,12 @@ type SquareStatus = Empty | X | O
 type alias Square = {status : SquareStatus, id : Int}
 
 newSquare : Square
-newSquare = 
-          {
-            status = Empty,
-            id = 0
-          }
+newSquare = { status = Empty,
+              id = 0 }
 
 
-type alias Model = 
-  {
-    board : Board,
-    turn : Player
-  }
+type alias Model = { board : Board,
+                     turn : Player }
 
 initialModel : Model
 initialModel = {
@@ -73,16 +67,12 @@ view address model =
         O -> div [class "o"]
           [text "O"]
       
-
   in
     div [] [
       div [id "board"] (L.map makeSquare model.board)
     ]
 
 main : Signal Html
-main = 
-  StartApp.start {
-    model = initialModel,
-    update = update,
-    view = view
-  }
+main = StartApp.start { model = initialModel,
+                        update = update,
+                        view = view }
