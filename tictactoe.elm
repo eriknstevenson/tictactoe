@@ -10,6 +10,7 @@ import List.Extra as LE
 import Maybe as M
 import Matrix as MX
 import StartApp.Simple as StartApp
+import Debug
 
 -- MODEL
 
@@ -25,7 +26,6 @@ toggleTurn player =
 
 type alias Board = List Square
 
---converts [1,2,3,4] to [[1,2],[3,4]]
 convertTo2D : List a -> Int -> List (List a)
 convertTo2D board size = 
   let 
@@ -93,31 +93,41 @@ update action model =
 
         convertedBoard = convertTo2D updatedBoardStatus 3
 
-        isThereAWinner = [ checkVerticals, checkHorizontals, checkDiagonals ]
-                           |> L.filter (\n->n>=3)
-                           |> L.isEmpty
-                           |> not
+        isThereAWinner = checks
+                         |> L.filter (\n->n>=2)
+                         |> L.isEmpty
+                         |> not
 
         checkForWinner = case isThereAWinner of
           True -> Just model.turn
           False -> Nothing
-
-        checkDir : (Int, Int) -> (Int, Int) -> Int -> Int
-        checkDir (x, y) (dx, dy) total = 0 
-          --case (M.withDefault [] (convertedBoard !! y)) !! x of
-          --newStatus -> 0 -- checkDir (x + dx) (y + dy) dx dy (total+1)
-          --Nothing -> total
-          
+       
+        checks = [ checkVerticals, 
+                   checkHorizontals, 
+                   checkDiagonalsA, 
+                   checkDiagonalsB ]
+        
         checkVerticals = L.sum [ checkDir (moveX, moveY) (0, -1) 0,
                                  checkDir (moveX, moveY) (0, 1) 0 ]
 
         checkHorizontals = L.sum [ checkDir (moveX, moveY) (-1, 0) 0,
                                    checkDir (moveX, moveY) (1, 0) 0 ]
 
-        checkDiagonals = L.sum [ checkDir (moveX, moveY) (-1, -1) 0,
-                                 checkDir (moveX, moveY) (-1, 1) 0,
-                                 checkDir (moveX, moveY) (1, -1) 0,
-                                 checkDir (moveX, moveY) (1, 1) 0 ]
+        checkDiagonalsA = L.sum [ checkDir (moveX, moveY) (-1, -1) 0,
+                                  checkDir (moveX, moveY) (1, 1) 0 ]
+        
+        checkDiagonalsB = L.sum [ checkDir (moveX, moveY) (1, -1) 0,
+                                  checkDir (moveX, moveY) (-1, 1) 0 ]
+        
+        checkDir : (Int, Int) -> (Int, Int) -> Int -> Int
+        checkDir (x, y) (dx, dy) total = 
+          case (M.withDefault [] (convertedBoard !! (y+dy)) !! (x+dx)) of
+            Nothing -> total
+            Just sqr -> 
+              if sqr==newStatus then
+                checkDir (x+dx, y+dy) (dx,dy) (total+1)
+              else
+                total
 
       in {model | board <- updatedBoard,
                   turn <- (toggleTurn model.turn),
@@ -130,11 +140,15 @@ update action model =
 view : S.Address Action -> Model -> Html
 view address model = 
   let
+    disableOnGameOverDiv sqr = case model.gameOver of
+      True -> [ class "empty" ]
+      False -> [ class "empty",
+                 onClick address (MakeMove sqr.id) ]
+
     makeSquare : Square -> Html
     makeSquare square =
       case square.status of
-        Empty -> div [onClick address (MakeMove square.id), class "empty"] 
-          []
+        Empty -> div (disableOnGameOverDiv square) []
         X -> div [class "x"]
           [text "X"]
         O -> div [class "o"]
@@ -147,18 +161,20 @@ view address model =
         Just Blue -> "Blue won! XD"
 
   in
-    case model.gameOver of
-      False ->
+    
         div [] [
-          div [id "board"] (L.map makeSquare model.board)
+          div [id "board"] (L.map makeSquare model.board),
+          div [class "notice"] (case model.gameOver of
+            False -> [text "Tictactoe"]
+            True ->
+              [ ul []
+                [ li [] [text "game over"],
+                  li [] [text <| winnerToString model.winner],
+                  li [] [text "click refresh to try again"] ]
+              ]
+            )
         ]
-      True ->
-        div [] [
-          ul [class "notice"]
-            [ li [] [text "game over"],
-              li [] [text <| winnerToString model.winner],
-              li [] [text "click refresh to try again"] ]
-        ]
+      
 
 main : Signal Html
 main = StartApp.start { model = initialModel,
