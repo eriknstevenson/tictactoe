@@ -128,27 +128,28 @@ update action model =
                 checkDir (x+dx, y+dy) (dx,dy) (total+1)
               else
                 total
+        
+        updatedGameOver = (updatedBoardStatus |> LE.notMember Empty ) 
+                          || checkForWinner /= Nothing
 
-      in {model | board <- updatedBoard,
-                  turn <- (toggleTurn model.turn),
-                  winner <- checkForWinner,
-                  gameOver <- (updatedBoardStatus |> LE.notMember Empty )
-                              || checkForWinner /= Nothing}
+      in case model.gameOver of
+        False -> {model | board <- updatedBoard,
+                          turn <- (toggleTurn model.turn),
+                          winner <- checkForWinner,
+                          gameOver <- updatedGameOver}
+        True -> model
 
 -- VIEW
 
 view : S.Address Action -> Model -> Html
 view address model = 
   let
-    disableOnGameOverDiv sqr = case model.gameOver of
-      True -> [ class "empty" ]
-      False -> [ class "empty",
-                 onClick address (MakeMove sqr.id) ]
 
     makeSquare : Square -> Html
     makeSquare square =
       case square.status of
-        Empty -> div (disableOnGameOverDiv square) []
+        Empty -> div [ class "empty",
+                 onClick address (MakeMove square.id) ] []
         X -> div [class "x"]
           [text "X"]
         O -> div [class "o"]
