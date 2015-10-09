@@ -8,9 +8,7 @@ import Signal as S
 import List as L
 import List.Extra as LE
 import Maybe as M
-import Matrix as MX
 import StartApp.Simple as StartApp
-import Debug
 
 -- MODEL
 
