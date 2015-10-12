@@ -4,13 +4,13 @@ module.exports = function(grunt) {
     elm: {
       compile: {
         files: {
-          "tictactoe.js": ["tic-tac-toe.elm"]
+          "tictactoe.js": ["tictactoe.elm"]
         }
       }
     },
     watch: {
       elm: {
-        files: ["tic-tac-toe.elm"],
+        files: ["tictactoe.elm"],
         tasks: ["elm"]
       }
     },
