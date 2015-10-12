@@ -12,9 +12,15 @@ import StartApp.Simple as StartApp
 
 -- MODEL
 
-type Action = None | MakeMove Int
+type Action 
+  = None 
+  | MakeMove Int
 
-type Player = Red | Blue
+
+type Player 
+  = Red 
+  | Blue
+
 
 toggleTurn : Player -> Player
 toggleTurn player = 
@@ -22,7 +28,9 @@ toggleTurn player =
     Red -> Blue
     Blue -> Red
 
+
 type alias Board = List Square
+
 
 convertTo2D : List a -> Int -> List (List a)
 convertTo2D board size = 
@@ -35,6 +43,7 @@ convertTo2D board size =
   in
     splitEvery size board
 
+
 (!!) : List a -> Int -> M.Maybe a
 xs !! n = 
   if | n < 0     -> Nothing
@@ -43,26 +52,37 @@ xs !! n =
          (x::xs,0) -> Just x
          (_::xs,n) -> xs !! (n-1)
 
-type SquareStatus = Empty | X | O
 
-type alias Square = {status : SquareStatus, id : Int}
+type SquareStatus 
+  = Empty 
+  | X 
+  | O
+
+
+type alias Square = 
+  { status : SquareStatus
+  , id : Int }
+
 
 newSquare : Square
-newSquare = { status = Empty,
-              id = 0 }
+newSquare = 
+  { status = Empty
+  , id = 0 }
 
-type alias Model = { board : Board,
-                     turn : Player,
-                     winner : Maybe Player,
-                     gameOver : Bool }
+
+type alias Model = 
+  { board : Board
+  , turn : Player
+  , winner : Maybe Player
+  , gameOver : Bool }
+
 
 initialModel : Model
-initialModel = {
-    board = L.map2 (\sq nId -> {sq | id <- nId} ) (L.repeat 9 newSquare) [1..9],
-    turn = Red,
-    winner = Nothing,
-    gameOver = False
-  }
+initialModel =
+  { board = L.map2 (\sq nId -> {sq | id <- nId} ) (L.repeat 9 newSquare) [1..9]
+  , turn = Red
+  , winner = Nothing
+  , gameOver = False }
 
 --UPDATE
 
@@ -70,6 +90,7 @@ update : Action -> Model -> Model
 update action model =
   case action of
     None -> model
+    
     MakeMove id ->
       let
         updateStatus square = 
@@ -92,7 +113,7 @@ update action model =
         convertedBoard = convertTo2D updatedBoardStatus 3
 
         isThereAWinner = checks
-                         |> L.filter (\n->n>=2)
+                         |> L.filter (\n->n>=3)
                          |> L.isEmpty
                          |> not
 
@@ -100,22 +121,27 @@ update action model =
           True -> Just model.turn
           False -> Nothing
        
-        checks = [ checkVerticals, 
-                   checkHorizontals, 
-                   checkDiagonalsA, 
-                   checkDiagonalsB ]
+        checks = 
+          [ checkVerticals
+          , checkHorizontals
+          , checkDiagonalsA
+          , checkDiagonalsB ]
         
-        checkVerticals = L.sum [ checkDir (moveX, moveY) (0, -1) 0,
-                                 checkDir (moveX, moveY) (0, 1) 0 ]
+        checkVerticals = 
+          L.sum [ checkDir (moveX, moveY) (0, -1) 1
+                , checkDir (moveX, moveY) (0, 1) 1 ] - 1
 
-        checkHorizontals = L.sum [ checkDir (moveX, moveY) (-1, 0) 0,
-                                   checkDir (moveX, moveY) (1, 0) 0 ]
+        checkHorizontals = 
+          L.sum [ checkDir (moveX, moveY) (-1, 0) 1
+                , checkDir (moveX, moveY) (1, 0) 1 ] - 1
 
-        checkDiagonalsA = L.sum [ checkDir (moveX, moveY) (-1, -1) 0,
-                                  checkDir (moveX, moveY) (1, 1) 0 ]
+        checkDiagonalsA = 
+          L.sum [ checkDir (moveX, moveY) (-1, -1) 1
+                , checkDir (moveX, moveY) (1, 1) 1 ] - 1
         
-        checkDiagonalsB = L.sum [ checkDir (moveX, moveY) (1, -1) 0,
-                                  checkDir (moveX, moveY) (-1, 1) 0 ]
+        checkDiagonalsB = 
+          L.sum [ checkDir (moveX, moveY) (1, -1) 1
+                , checkDir (moveX, moveY) (-1, 1) 1 ] - 1
         
         checkDir : (Int, Int) -> (Int, Int) -> Int -> Int
         checkDir (x, y) (dx, dy) total = 
@@ -127,14 +153,14 @@ update action model =
               else
                 total
         
-        updatedGameOver = (updatedBoardStatus |> LE.notMember Empty ) 
-                          || checkForWinner /= Nothing
+        updatedGameOver = 
+          (updatedBoardStatus |> LE.notMember Empty ) || checkForWinner /= Nothing
 
       in case model.gameOver of
-        False -> {model | board <- updatedBoard,
-                          turn <- (toggleTurn model.turn),
-                          winner <- checkForWinner,
-                          gameOver <- updatedGameOver}
+        False -> {model | board <- updatedBoard
+                        , turn <- (toggleTurn model.turn)
+                        , winner <- checkForWinner
+                        , gameOver <- updatedGameOver }
         True -> model
 
 -- VIEW
@@ -142,7 +168,6 @@ update action model =
 view : S.Address Action -> Model -> Html
 view address model = 
   let
-
     makeSquare : Square -> Html
     makeSquare square =
       case square.status of
@@ -152,6 +177,7 @@ view address model =
           [text "X"]
         O -> div [class "o"]
           [text "O"]
+    
     winnerToString : Maybe Player -> String
     winnerToString winner =
       case winner of
@@ -160,22 +186,22 @@ view address model =
         Just Blue -> "Blue won! XD"
 
   in
-    
-        div [] [
-          div [id "board"] (L.map makeSquare model.board),
-          div [class "notice"] (case model.gameOver of
+    div [] 
+      [ div [id "board"] (L.map makeSquare model.board)
+      , div [class "notice"] 
+          (case model.gameOver of
             False -> [text "Tictactoe"]
             True ->
               [ ul []
-                [ li [] [text "game over"],
-                  li [] [text <| winnerToString model.winner],
-                  li [] [text "click refresh to try again"] ]
+                [ li [] [text "game over"]
+                , li [] [text <| winnerToString model.winner]
+                , li [] [text "click refresh to try again"] ]
               ]
-            )
+          )
         ]
       
 
 main : Signal Html
-main = StartApp.start { model = initialModel,
-                        update = update,
-                        view = view }
+main = StartApp.start { model = initialModel
+                      , update = update
+                      , view = view }
